@@ -551,19 +551,18 @@ class RelatedField(ApiField):
             return fk_resource.full_hydrate(fk_bundle)
 
         try:
-            return fk_resource.obj_update(fk_bundle, skip_errors=True, **data)
-        except NotFound:
-            try:
-                # Attempt lookup by primary key
-                lookup_kwargs = dict((k, v) for k, v in data.iteritems() if getattr(fk_resource, k).unique)
+            # Attempt lookup by primary key           
+            lookup_kwargs = dict((k, v) for k, v in data.iteritems() \
+                if fk_resource._meta.detail_uri_name == k or \
+                getattr(fk_resource, k).unique)
 
-                if not lookup_kwargs:
-                    raise NotFound()
-                return fk_resource.obj_update(fk_bundle, skip_errors=True, **lookup_kwargs)
-            except NotFound:
-                fk_bundle = fk_resource.full_hydrate(fk_bundle)
-                fk_resource.is_valid(fk_bundle, request)
-                return fk_bundle
+            if not lookup_kwargs:
+                raise NotFound()
+            return fk_resource.obj_update(fk_bundle, skip_errors=True, **lookup_kwargs)
+        except NotFound:
+            fk_bundle = fk_resource.full_hydrate(fk_bundle)
+            fk_resource.is_valid(fk_bundle, request)
+            return fk_bundle
         except MultipleObjectsReturned:
             return fk_resource.full_hydrate(fk_bundle)
 
